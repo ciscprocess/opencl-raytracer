@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.cl</file>
+        <file>scene.cl</file>
+        <file>rt_math.cl</file>
+        <file>pcg.cl</file>
+        <file>bsdf.cl</file>
+        <file>bsdf.lambert.cl</file>
+        <file>bsdf.specular.cl</file>
+    </qresource>
+</RCC>
