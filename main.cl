@@ -10,7 +10,7 @@ float3 li(float2 ndc,
     float3 scale = (float3)(1.f, 1.f, 1.f), total_radiance = (float3)(0.f, 0.f, 0.f);
     float3 wo = (float3)(0.f, 0.f, 0.f);
 
-    int depth = 5;
+    int depth = 4;
     for (int i = 0; i <= depth; i++) {
         wo = -ray.dir;
         intersection_t current_isect = scene_intersect(ray, scene, shapes);

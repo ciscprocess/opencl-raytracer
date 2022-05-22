@@ -185,16 +185,16 @@ bool JsonSceneReader::load_material(QJsonObject &material, QMap<QString, Materia
         bxdf.eta = eta;
         result.bsdf.bxdfs[0] = bxdf;
 
-        bxdf.props = (bxdfprops_t)(BSDF_TRANSMISSION | BSDF_SPECULAR);
-        bxdf.color.x = Kt.x;
-        bxdf.color.y = Kt.y;
-        bxdf.color.z = Kt.z;
-        bxdf.type = BTDF_SPECULAR;
-        bxdf.eta = eta;
-        result.bsdf.bxdfs[1] = bxdf;
+//        bxdf.props = (bxdfprops_t)(BSDF_TRANSMISSION | BSDF_SPECULAR);
+//        bxdf.color.x = Kt.x;
+//        bxdf.color.y = Kt.y;
+//        bxdf.color.z = Kt.z;
+//        bxdf.type = BTDF_SPECULAR;
+//        bxdf.eta = eta;
+//        result.bsdf.bxdfs[1] = bxdf;
 
 
-        result.bsdf.bxdfs_count = 2;
+        result.bsdf.bxdfs_count = 1;
         mtl_map->insert(material["name"].toString(), result);
     }
 //    else if(QString::compare(type, QString("TranslucentMaterial")) == 0) {

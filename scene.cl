@@ -108,7 +108,8 @@ bool cube_intersect(shape_t *box, ray_t r, intersection_t *isect) {
     intersection_t new_isect;
     new_isect.t = tmin;
     new_isect.point = r.p + tmin*r.dir;
-    new_isect.normal = get_cube_normal(r_loc.p + tmin*r_loc.dir);
+    float4 local_normal = (float4)(get_cube_normal(r_loc.p + tmin*r_loc.dir), 0.f);
+    new_isect.normal = fast_normalize(matrix_mult(box->inv_tr_transform, local_normal).xyz);//get_cube_normal(r_loc.p + tmin*r_loc.dir);
     *isect = new_isect;
     return true;
 }
@@ -160,7 +161,7 @@ bool sphere_intersect(shape_t *sphere, ray_t ray, intersection_t *intersect) {
     intersection_t intersection;
     intersection.t = t;
     intersection.point = eye + dir * t;
-    intersection.normal = normalize(matrix_mult(sphere->inv_tr_transform, (float4)(normalize(trans_eye + trans_dir * t), 0.f)).xyz);
+    intersection.normal = fast_normalize(matrix_mult(sphere->inv_tr_transform, (float4)(trans_eye + trans_dir * t, 0.f)).xyz);
     *intersect = intersection;
     return discriminant >= 0 && t >= 0.f;
 }

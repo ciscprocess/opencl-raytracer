@@ -24,14 +24,14 @@ MainWindow::MainWindow(QWidget *parent)
     JsonSceneReader reader;
 
     // TODO: Configure.
-    QFile file("/Users/nathankorzekwa/Projects/opencl-raytracer/scene_files/PT_glassBallBox.json");
+    QFile file("/Users/nathankorzekwa/Projects/opencl-raytracer/scene_files/PT_cornellBox.json");
     Scene s = reader.load_scene(file);
-    Raytracer rt(width, height, ":/main.cl", 10000);
+    Raytracer rt(width, height, ":/main.cl", 100);
 
     try {
         rt.set_scene(s);
 
-        auto render = rt.render(10);
+        auto render = rt.render(20);
         m_gfx_scene.clear();
         m_gfx_scene.addPixmap(QPixmap::fromImage(render));
         ui->preview->setScene(&m_gfx_scene);
