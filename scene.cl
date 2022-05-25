@@ -72,68 +72,76 @@ float3 get_cube_normal(float3 p) {
     return N;
 }
 
-//__constant static float bounds[2] = {-0.5, 0.5};
-bool cube_intersect(shape_t *box, ray_t r, intersection_t *isect) {
-    float tmin, tmax, tymin, tymax, tzmin, tzmax;
-    ray_t r_loc = transform_ray(r, box->inv_transform);
-
-    float3 invdir = (float3)(1 / r_loc.dir.x, 1 / r_loc.dir.y, 1 / r_loc.dir.z);
-    int sign[3];
-    sign[0] = (r_loc.dir.x < 0);
-    sign[1] = (r_loc.dir.y < 0);
-    sign[2] = (r_loc.dir.z < 0);
-
-    float bounds[2] = {-0.5, 0.5};
-    tmin = (bounds[sign[0]] - r_loc.p.x) * invdir.x;
-    tmax = (bounds[1-sign[0]] - r_loc.p.x) * invdir.x;
-    tymin = (bounds[sign[1]] - r_loc.p.y) * invdir.y;
-    tymax = (bounds[1-sign[1]] - r_loc.p.y) * invdir.y;
-
-    if ((tmin > tymax) || (tymin > tmax))
-        return false;
-
-    tmin = max(tymin, tmin);
-    tmax = min(tymax, tmax);
-
-    tzmin = (bounds[sign[2]] - r_loc.p.z) * invdir.z;
-    tzmax = (bounds[1-sign[2]] - r_loc.p.z) * invdir.z;
-
-    if ((tmin > tzmax) || (tzmin > tmax))
-        return false;
-//    if (tzmin > tmin)
-//        tmin = tzmin;
-    tmin = max(tzmin, tmin);
-    if (tmin <= 0) return false;
-    //InitializeIntersection(isect, tmin, r_loc.origin + tmin*r_loc.direction, r.origin + tmin*r.direction);
-    intersection_t new_isect;
-    new_isect.t = tmin;
-    new_isect.point = r.p + tmin*r.dir;
-    float4 local_normal = (float4)(get_cube_normal(r_loc.p + tmin*r_loc.dir), 0.f);
-    new_isect.normal = fast_normalize(matrix_mult(box->inv_tr_transform, local_normal).xyz);//get_cube_normal(r_loc.p + tmin*r_loc.dir);
-    *isect = new_isect;
-    return true;
+float3 get_cube_normal2(float3 p) {
+    float3 abs_p = fabs(p);
+    float max_dim = fmax(abs_p.x, fmax(abs_p.y, abs_p.z));
+    float3 N = floor(abs_p / max_dim) * sign(p);
+    return N;
 }
 
-bool squareplane_intersect(shape_t *plane, ray_t ray, intersection_t *intersect) {
-    ray_t trans_ray = transform_ray(ray, plane->inv_transform);
-    if (fabs(trans_ray.dir.z) == 0) {
-        return false;
-    }
+float3 get_cube_normal3(float3 p) {
+    float3 abs_p = fabs(p);
+    float max_dim = fmax(abs_p.x, fmax(abs_p.y, abs_p.z));
+    float3 N = fmax(sign(abs_p + float3(0.000001f) - max_dim), (float3)(0.f));
+    return N;
+}
 
-    float t = -trans_ray.p.z / trans_ray.dir.z;
-    intersection_t intersection;
-    intersection.t = t;
-    intersection.point = ray.p + ray.dir * t;
+//__constant static float bounds[2] = {-0.5, 0.5};
+bool cube_intersect(shape_t *box, ray_t r, float *t, float3 *local_normal) {
+    ray_t r_loc = transform_ray(r, box->inv_transform);
+
+    // This division is slow. Is it really needed?
+    float3 inv_dir = 1.f / r_loc.dir;
+    float tx1 = (-0.5 - r_loc.p.x) * inv_dir.x;
+    float tx2 = (0.5 - r_loc.p.x) * inv_dir.x;
+
+    float tmin = fmin(tx1, tx2);
+    float tmax = fmax(tx1, tx2);
+
+    float ty1 = (-0.5 - r_loc.p.y) * inv_dir.y;
+    float ty2 = (0.5 - r_loc.p.y) * inv_dir.y;
+
+    tmin = fmax(tmin, fmin(ty1, ty2));
+    tmax = fmin(tmax, fmax(ty1, ty2));
+
+    float tz1 = (-0.5 - r_loc.p.z) * inv_dir.z;
+    float tz2 = (0.5 - r_loc.p.z) * inv_dir.z;
+
+    tmin = fmax(tmin, fmin(tz1, tz2));
+    tmax = fmin(tmax, fmax(tz1, tz2));
+
+//    intersection_t new_isect;
+//    new_isect.t = tmin < 0 ? tmax : tmin;
+//    new_isect.point = new_isect.t * r.dir + r.p;
+//    new_isect.normal = get_cube_normal(new_isect.t * r_loc.dir + r_loc.p);
+//    new_isect.normal = fast_normalize(matrix_mult(box->inv_tr_transform, (float4)(new_isect.normal, 0.f)).xyz);
+//    *isect = new_isect;
+    *t = tmin < 0 ? tmax : tmin;
+    *local_normal = get_cube_normal((*t) * r_loc.dir + r_loc.p);
+    return tmax >= tmin;
+}
+
+bool squareplane_intersect(shape_t *plane, ray_t ray, float *t, float3 *local_normal) {
+    ray_t trans_ray = transform_ray(ray, plane->inv_transform);
+//    if (fabs(trans_ray.dir.z) == 0) {
+//        return false;
+//    }
+
+    *t = -trans_ray.p.z / trans_ray.dir.z;
+//    intersection_t intersection;
+//    intersection.t = t;
+//    intersection.point = ray.p + ray.dir * t;
 
     // Multiplying inv_tr_transform by (0, 0, 1, 0) is just the 3rd column of inv_tr_transform.
-    intersection.normal = plane->inv_transform[2].xyz;//(float3)(plane->inv_tr_transform[0].z, plane->inv_tr_transform[1].z, plane->inv_tr_transform[2].z);
-    //intersection.normal = normalize((float3)(0.f, 1.f, 1.f));
-    float3 domain_point = trans_ray.p + trans_ray.dir * t;
-    *intersect = intersection;
+//    intersection.normal = plane->inv_transform[2].xyz;//(float3)(plane->inv_tr_transform[0].z, plane->inv_tr_transform[1].z, plane->inv_tr_transform[2].z);
+//    //intersection.normal = normalize((float3)(0.f, 1.f, 1.f));
+    float3 domain_point = trans_ray.p + trans_ray.dir * (*t);
+//    *intersect = intersection;
+    *local_normal = (float3)(0, 0, 1);
     return fabs(domain_point.x) <= 0.5 & fabs(domain_point.y) <= 0.5;
 }
 
-bool sphere_intersect(shape_t *sphere, ray_t ray, intersection_t *intersect) {
+bool sphere_intersect(shape_t *sphere, ray_t ray, float *t, float3 *local_normal) {
     const float RADIUS = 0.5f;
 
     ray_t trans_ray = transform_ray(ray,sphere->inv_transform);
@@ -151,29 +159,30 @@ bool sphere_intersect(shape_t *sphere, ray_t ray, intersection_t *intersect) {
     float3 dir = ray.dir;
     float3 eye = ray.p;
     float t1 = (-b + sqrt(discriminant)) / (2.f*a), t2 = (-b - sqrt(discriminant)) / (2.f*a);
-    float t = t1 >= 0.f && t1 <= t2 ? t1 : t2;
+    *t = t1 >= 0.f && t1 <= t2 ? t1 : t2;
 
     // Avoid branching at heavy cost.
 //    if (t < 0.f) {
 //        return false;
 //    }
 
-    intersection_t intersection;
-    intersection.t = t;
-    intersection.point = eye + dir * t;
-    intersection.normal = fast_normalize(matrix_mult(sphere->inv_tr_transform, (float4)(trans_eye + trans_dir * t, 0.f)).xyz);
-    *intersect = intersection;
-    return discriminant >= 0 && t >= 0.f;
+//    intersection_t intersection;
+//    intersection.t = t;
+//    intersection.point = eye + dir * t;
+//    intersection.normal = fast_normalize(matrix_mult(sphere->inv_tr_transform, (float4)(trans_eye + trans_dir * t, 0.f)).xyz);
+//    *intersect = intersection;
+    *local_normal = trans_eye + trans_dir * (*t);
+    return discriminant >= 0 && (*t) >= 0.f;
 }
 
-bool shape_intersection(shape_t *shape, ray_t ray, intersection_t *intersect) {
+bool shape_intersection(shape_t *shape, ray_t ray, float *t, float3 *local_normal) {
     switch (shape->type) {
     case SPHERE:
-        return sphere_intersect(shape, ray, intersect);
+        return sphere_intersect(shape, ray, t, local_normal);
     case SQUAREPLANE:
-        return squareplane_intersect(shape, ray, intersect);
+        return squareplane_intersect(shape, ray, t, local_normal);
     case BOX:
-        return cube_intersect(shape, ray, intersect);
+        return cube_intersect(shape, ray, t, local_normal);
     default:
         return false;
     }
@@ -184,23 +193,33 @@ intersection_t scene_intersect(
         __global const scene_t *scene,
         __global const shape_t *shapes) {
     float closest = 999999.f;
-    intersection_t closest_intersection;
-    closest_intersection.t = -1;
+    float closest_t = -1.f;
+    float3 closest_local_normal;
+    closest_local_normal.z = 1.f;
+    int closest_i = 0;
     for (int i = 0; i < scene->shape_count; i++) {
         shape_t shape = shapes[i];
 
-        intersection_t intersection;
-        if (!shape_intersection(&shape, ray, &intersection)) {
+        float t;
+        float3 local_normal;
+        if (!shape_intersection(&shape, ray, &t, &local_normal)) {
             continue;
         }
 
-        intersection.shape_index = i;
-
-        if (intersection.t > 0.f && intersection.t < closest) {
-            closest_intersection = intersection;
-            closest = intersection.t;
+        if (t > 0.f && t < closest) {
+            closest_t = t;
+            closest_local_normal = local_normal;
+            closest_i = i;
         }
     }
 
-    return closest_intersection;
+    shape_t shape = shapes[closest_i];
+    intersection_t intersection;
+    intersection.shape_index = closest_i;
+    intersection.point = ray.p + ray.dir * closest_t;
+    intersection.t = closest_t;
+    //intersection.normal = normalize((float3)(0.f, 0.f, -1.f));
+    intersection.normal = fast_normalize(matrix_mult43(shape.inv_tr_transform, closest_local_normal));
+    //intersection.normal = fast_normalize(matrix_mult(shape.inv_tr_transform, (float4)(closest_local_normal, 0.f)).xyz);
+    return intersection;
 }

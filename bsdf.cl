@@ -126,23 +126,23 @@ float3 bsdf_sample_f(
 
     *wiW = matrix_mult3_tr(world_to_tangent, wi);
 
-    if (!(bxdf.props & BSDF_SPECULAR)) {
-        *pdf = 0;
-        for (int i = 0; i < bsdf->bxdfs_count; ++i) {
-            *pdf +=  bxdf_pdf(bsdf->bxdfs[i], wo, wi);
-        }
-        *pdf /= matching_comps;
-    }
+//    if (!(bxdf.props & BSDF_SPECULAR)) {
+//        *pdf = 0;
+//        for (int i = 0; i < bsdf->bxdfs_count; ++i) {
+//            *pdf +=  bxdf_pdf(bsdf->bxdfs[i], wo, wi);
+//        }
+//        *pdf /= matching_comps;
+//    }
 
-    if (!(bxdf.props & BSDF_SPECULAR)) {
-        f = (float3)(0.f, 0.f, 0.f);
-        bool reflect = dot(*wiW, nor) * dot(woW, nor) > 0;
-        for (int i = 0; i < bsdf->bxdfs_count; ++i) {
-            if ((reflect && (bsdf->bxdfs[i].props & BSDF_REFLECTION)) || (!reflect && (bsdf->bxdfs[i].props & BSDF_TRANSMISSION))) {
-                f += bxdf_f(bsdf->bxdfs[i], wo, wi);
-            }
-        }
-    }
+//    if (!(bxdf.props & BSDF_SPECULAR)) {
+//        f = (float3)(0.f, 0.f, 0.f);
+//        bool reflect = dot(*wiW, nor) * dot(woW, nor) > 0;
+//        for (int i = 0; i < bsdf->bxdfs_count; ++i) {
+//            if ((reflect && (bsdf->bxdfs[i].props & BSDF_REFLECTION)) || (!reflect && (bsdf->bxdfs[i].props & BSDF_TRANSMISSION))) {
+//                f += bxdf_f(bsdf->bxdfs[i], wo, wi);
+//            }
+//        }
+//    }
 
     return f;
 }

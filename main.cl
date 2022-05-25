@@ -66,17 +66,26 @@ __kernel void pathtrace(
     unsigned long rng_state = rngs[id];
     rng(&rng_state);
 
+//    float2 ndc = ndcs[id];
+//    float3 accum_color = (float3)(0.f, 0.f, 0.f);
+//    for (unsigned int i = 0; i < iterations; i++) {
+//        ray_t ray = raycast(scene->camera, ndcs[id], &rng_state);
+//        accum_color += li(ndc, ray, &rng_state, scene, shapes);
+//    }
+
+//    colors[id] = accum_color / iterations;
+
     float3 accum_color = (float3)(0.f, 0.f, 0.f);
     for (unsigned int i = 0; i < iterations; i++) {
         ray_t ray = raycast(scene->camera, ndcs[id], &rng_state);
-        accum_color += li(ndcs[id], ray, &rng_state, scene, shapes);
+        intersection_t isect = scene_intersect(ray, scene, shapes);
+        if (isect.t >= 0) {
+            accum_color += (isect.normal + 1) * 0.5;
+        }
     }
 
     colors[id] = accum_color / iterations;
-
-//    float v = get_xi(&rng_state).x;
-//    colors[id] = (float3)(v);
-//    rngs[id] = rng_state;
+    //colors[id] = ray.dir;
 }
 
 

@@ -26,7 +26,7 @@ MainWindow::MainWindow(QWidget *parent)
     // TODO: Configure.
     QFile file("/Users/nathankorzekwa/Projects/opencl-raytracer/scene_files/PT_cornellBox.json");
     Scene s = reader.load_scene(file);
-    Raytracer rt(width, height, ":/main.cl", 100);
+    Raytracer rt(width, height, ":/main.cl", 200);
 
     try {
         rt.set_scene(s);

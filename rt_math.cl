@@ -38,6 +38,14 @@ inline float3 matrix_mult3(float3 m[3], float3 v) {
     return new_v;
 }
 
+inline float3 matrix_mult43(float4 m[4], float3 v) {
+    float3 new_v = (float3)(0.f, 0.f, 0.f);
+    new_v.x = m[0].x * v.x + m[0].y * v.y + m[0].z * v.z;
+    new_v.y = m[1].x * v.x + m[1].y * v.y + m[1].z * v.z;
+    new_v.z = m[2].x * v.x + m[2].y * v.y + m[2].z * v.z;
+    return new_v;
+}
+
 inline float3 matrix_mult3_tr(float3 m[3], float3 v) {
     float3 new_v = (float3)(0.f, 0.f, 0.f);
     new_v.x = v.x * m[0].x + v.y * m[1].x + v.z * m[2].x;//dot(m[0], v);

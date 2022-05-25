@@ -177,6 +177,7 @@ std::vector<cl_float3> OpenCLRayTracerHarness::run_kernel() {
 
     size_t global_item_size = m_width * m_height;
     size_t local_item_size = 64;
+    clFinish(m_command_queue);
     auto before = std::chrono::high_resolution_clock::now();
 
     ret = clEnqueueNDRangeKernel(m_command_queue, m_kernel, 1, NULL,
