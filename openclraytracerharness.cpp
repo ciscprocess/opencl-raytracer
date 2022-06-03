@@ -52,14 +52,6 @@ OpenCLRayTracerHarness::OpenCLRayTracerHarness(
     clGetDeviceInfo(device_id, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &cu_count, NULL);
     std::cout << "Number of compute units: " << cu_count << std::endl;
 
-//    cl_device_id logical_device;
-//    const cl_device_partition_property props[] = {CL_DEVICE_PARTITION_EQUALLY, 8, 0};
-//    clCreateSubDevices (device_id,
-//        props,
-//        1,
-//        &logical_device,
-//        NULL);
-
     cl_int ret;
     m_context = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret);
     assert_success(ret);
@@ -70,7 +62,6 @@ OpenCLRayTracerHarness::OpenCLRayTracerHarness(
     m_scene_mem_obj = clCreateBuffer(m_context, CL_MEM_READ_ONLY, sizeof(scene_t), NULL, &ret);
     assert_success(ret);
 
-    //m_shapes_mem_obj = clCreateBuffer(m_context, CL_MEM_READ_ONLY, scene.get_primitives().size() * sizeof(shape_t), NULL, &ret);
     m_ndcs_mem_obj = clCreateBuffer(m_context, CL_MEM_READ_ONLY,  width * height * sizeof(cl_float2), NULL, &ret);
     assert_success(ret);
 
@@ -92,22 +83,24 @@ OpenCLRayTracerHarness::OpenCLRayTracerHarness(
     // Build the program
     ret = clBuildProgram(m_program, 1, &device_id, "-I /Users/nathankorzekwa/Projects/opencl-raytracer", NULL, NULL);
     if (ret == CL_BUILD_PROGRAM_FAILURE) {
-        // Determine the size of the log
-        size_t log_size;
-        clGetProgramBuildInfo(m_program, device_id, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
-
-        // Allocate memory for the log
-        char *log = (char *) malloc(log_size);
-
-        // Get the log
-        clGetProgramBuildInfo(m_program, device_id, CL_PROGRAM_BUILD_LOG, log_size, log, NULL);
-
-        // Print the log
-        std::cerr << log << std::endl;
-        free(log);
+        std::cerr << "OpenCL kernel build failure." << std::endl;
     } else if (ret == CL_SUCCESS) {
         std::cout << "OpenCL kernel built successfully." << std::endl;
     }
+
+    // Determine the size of the log
+    size_t log_size;
+    clGetProgramBuildInfo(m_program, device_id, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+
+    // Allocate memory for the log
+    char *log = (char *) malloc(log_size);
+
+    // Get the log
+    clGetProgramBuildInfo(m_program, device_id, CL_PROGRAM_BUILD_LOG, log_size, log, NULL);
+
+    // Print the log
+    std::cerr << log << std::endl;
+    free(log);
 
     for (int y = 0; y < height; ++y) {
         float ndc_y = -1 + 2 * (y/(float)width);

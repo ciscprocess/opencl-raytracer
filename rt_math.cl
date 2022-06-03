@@ -91,31 +91,21 @@ ray_t spawn_ray(float3 pos, float3 wi) {
 }
 
 /* ---- SAMPLING stuff ----  */
-float3 square_to_disk(float2 xi) {
-    // Map [0, 1) to [-1, 1)
+float2 square_to_disk(float2 xi) {
     float2 offset = 2.f * xi - (float2)(1.f, 1.f);
 
-    // Handle degeneracy case at origin
-    // TODO: Faster way without branching?
-//    if (offset.x == 0 && offset.y == 0) {
-//        return (float3)(0.f,0.f,0.f);
-//    }
+    // Ternary operator avoids branching. I think most GPU architectures
+    // have a specific instruction that makes simple selections like this.
+    float large = maxmag(offset.x, offset.y);
+    float theta = (large == offset.x) ?
+                    PI / 4.f * (offset.y / offset.x) :
+                    PI / 2.f - PI / 4.f * (offset.x / offset.y);
 
-    // Perform the concentric mapping
-    float theta, r;
-    float large = maxmag(offset.x, offset.y),
-          small = minmag(offset.x, offset.y);
-
-    theta =
-            (large == offset.x) ?
-                PI / 4.f * (offset.y / offset.x) :
-                PI / 2.f - PI / 4.f * (offset.x / offset.y);
-
-    return large * (float3)(cos(theta), sin(theta), 0.f);
+    return large * (float2)(cos(theta), sin(theta));
 }
 
 float3 square_to_hemi(float2 xi, float *pdf) {
-    float3 p = square_to_disk(xi);
+    float3 p = (float3)(square_to_disk(xi), 0.f);
     p.z = sqrt(max(0.f, 1 - p.x * p.x - p.y * p.y));
     *pdf = p.z * INV_PI;
     return p;
@@ -142,7 +132,7 @@ void coordinate_system(float3 nor, float3 *tan, float3 *bit) {
     // Removes the need for a branch. Bit hacky though, revisit for elegance.
     const float4 arb_vec = (float4)(0.109724f, 0.123286f, -0.986287f, 0.f);
 
-    float4 nor4 = (float4)(nor[0], nor[1], nor[2], 0.f);
+    float4 nor4 = (float4)(nor, 0.f);
     float4 tan4 = cross(nor4, arb_vec);
     *bit = normalize(cross(nor4, tan4).xyz);
     *tan = normalize(tan4.xyz);

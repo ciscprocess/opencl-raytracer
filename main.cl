@@ -2,58 +2,58 @@
 #include "bsdf.cl"
 #include "scene.cl"
 
-float3 li(float2 ndc,
-          ray_t ray,
-          unsigned long *rng_state,
-          __global const scene_t *scene,
-          __global const shape_t *shapes) {
-    float3 scale = (float3)(1.f, 1.f, 1.f), total_radiance = (float3)(0.f, 0.f, 0.f);
-    float3 wo = (float3)(0.f, 0.f, 0.f);
+//float3 li(float2 ndc,
+//          ray_t ray,
+//          unsigned long *rng_state,
+//          __global const scene_t *scene,
+//          __global const shape_t *shapes) {
+//    float3 scale = (float3)(1.f, 1.f, 1.f), total_radiance = (float3)(0.f, 0.f, 0.f);
+//    float3 wo = (float3)(0.f, 0.f, 0.f);
 
-    int depth = 4;
-    for (int i = 0; i <= depth; i++) {
-        wo = -ray.dir;
-        intersection_t current_isect = scene_intersect(ray, scene, shapes);
+//    int depth = 4;
+//    for (int i = 0; i <= depth; i++) {
+//        wo = -ray.dir;
+//        intersection_t current_isect = scene_intersect(ray, scene, shapes);
 
-        if (current_isect.t < 0.f) {
-            break;
-        }
+//        if (current_isect.t < 0.f) {
+//            break;
+//        }
 
-        //float3 isect_p = ray.p + current_isect.t * ray.dir;
-        total_radiance += scale * shapes[current_isect.shape_index].le;
+//        //float3 isect_p = ray.p + current_isect.t * ray.dir;
+//        total_radiance += scale * shapes[current_isect.shape_index].le;
 
-        if (shapes[current_isect.shape_index].bsdf.bxdfs_count == 0) {
-            break;
-        }
+//        if (shapes[current_isect.shape_index].bsdf.bxdfs_count == 0) {
+//            break;
+//        }
 
-        float3 wi;
-        float pdf = 1.f;
-        int flags;
-        float2 samp = get_xi(rng_state);
-        float3 bsdf_f = bsdf_sample_f(
-                    &shapes[current_isect.shape_index].bsdf,
-                    current_isect.normal,
-                    wo,
-                    &wi,
-                    samp,
-                    &pdf);
+//        float3 wi;
+//        float pdf = 1.f;
+//        int flags;
+//        float2 samp = get_xi(rng_state);
+//        float3 bsdf_f = bsdf_sample_f(
+//                    &shapes[current_isect.shape_index].bsdf,
+//                    current_isect.normal,
+//                    wo,
+//                    &wi,
+//                    samp,
+//                    &pdf);
 
-        if (pdf == 0.f) {
-            break;
-        }
+//        if (pdf == 0.f) {
+//            break;
+//        }
 
-        //wi = normalize((float3)(0,7.45,0) - current_isect.point)l
+//        //wi = normalize((float3)(0,7.45,0) - current_isect.point)l
 
-        scale *= bsdf_f;
-        scale *= fabs(dot(wi, current_isect.normal));
-        scale /= pdf;
-        //ray = spawn_ray(current_isect.point, wi);
-        ray.p = current_isect.point + wi * 0.00001;
-        ray.dir = wi;
-    }
+//        scale *= bsdf_f;
+//        scale *= fabs(dot(wi, current_isect.normal));
+//        scale /= pdf;
+//        //ray = spawn_ray(current_isect.point, wi);
+//        ray.p = current_isect.point + wi * 0.00001;
+//        ray.dir = wi;
+//    }
 
-    return total_radiance;
-}
+//    return total_radiance;
+//}
 
 __kernel void pathtrace(
     __global const scene_t *scene,
@@ -75,10 +75,22 @@ __kernel void pathtrace(
 
 //    colors[id] = accum_color / iterations;
 
+    int local_id = get_local_id(0);
+    __local scene_t local_scene;
+    __local shape_t local_shapes[10];
+    if (local_id == 0) {
+        local_scene = *scene;
+        for (int i = 0; i < scene->shape_count; i++) {
+            local_shapes[i] = shapes[i];
+        }
+    }
+    float2 ndc = ndcs[id];
+    barrier(CLK_LOCAL_MEM_FENCE);
+
     float3 accum_color = (float3)(0.f, 0.f, 0.f);
     for (unsigned int i = 0; i < iterations; i++) {
-        ray_t ray = raycast(scene->camera, ndcs[id], &rng_state);
-        intersection_t isect = scene_intersect(ray, scene, shapes);
+        ray_t ray = raycast(scene->camera, ndc, &rng_state);
+        intersection_t isect = scene_intersect(ray, scene->shape_count, local_shapes);
         if (isect.t >= 0) {
             accum_color += (isect.normal + 1) * 0.5;
         }

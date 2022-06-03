@@ -87,11 +87,11 @@ float3 get_cube_normal3(float3 p) {
 }
 
 //__constant static float bounds[2] = {-0.5, 0.5};
-bool cube_intersect(shape_t *box, ray_t r, float *t, float3 *local_normal) {
+bool cube_intersect(local shape_t *box, ray_t r, float *t, float3 *local_normal) {
     ray_t r_loc = transform_ray(r, box->inv_transform);
 
     // This division is slow. Is it really needed?
-    float3 inv_dir = 1.f / r_loc.dir;
+    float3 inv_dir = native_divide(1.f, r_loc.dir);
     float tx1 = (-0.5 - r_loc.p.x) * inv_dir.x;
     float tx2 = (0.5 - r_loc.p.x) * inv_dir.x;
 
@@ -121,27 +121,17 @@ bool cube_intersect(shape_t *box, ray_t r, float *t, float3 *local_normal) {
     return tmax >= tmin;
 }
 
-bool squareplane_intersect(shape_t *plane, ray_t ray, float *t, float3 *local_normal) {
+bool squareplane_intersect(local shape_t *plane, ray_t ray, float *t, float3 *local_normal) {
     ray_t trans_ray = transform_ray(ray, plane->inv_transform);
-//    if (fabs(trans_ray.dir.z) == 0) {
-//        return false;
-//    }
-
     *t = -trans_ray.p.z / trans_ray.dir.z;
-//    intersection_t intersection;
-//    intersection.t = t;
-//    intersection.point = ray.p + ray.dir * t;
 
-    // Multiplying inv_tr_transform by (0, 0, 1, 0) is just the 3rd column of inv_tr_transform.
-//    intersection.normal = plane->inv_transform[2].xyz;//(float3)(plane->inv_tr_transform[0].z, plane->inv_tr_transform[1].z, plane->inv_tr_transform[2].z);
-//    //intersection.normal = normalize((float3)(0.f, 1.f, 1.f));
     float3 domain_point = trans_ray.p + trans_ray.dir * (*t);
-//    *intersect = intersection;
     *local_normal = (float3)(0, 0, 1);
+
     return fabs(domain_point.x) <= 0.5 & fabs(domain_point.y) <= 0.5;
 }
 
-bool sphere_intersect(shape_t *sphere, ray_t ray, float *t, float3 *local_normal) {
+bool sphere_intersect(local shape_t *sphere, ray_t ray, float *t, float3 *local_normal) {
     const float RADIUS = 0.5f;
 
     ray_t trans_ray = transform_ray(ray,sphere->inv_transform);
@@ -152,30 +142,14 @@ bool sphere_intersect(shape_t *sphere, ray_t ray, float *t, float3 *local_normal
     float c = trans_eye.x * trans_eye.x + trans_eye.y * trans_eye.y + trans_eye.z * trans_eye.z - (RADIUS * RADIUS);
 
     float discriminant = b * b - 4 * a * c;
-//    if (discriminant < 0) {
-//        return false;
-//    }
-
-    float3 dir = ray.dir;
-    float3 eye = ray.p;
     float t1 = (-b + sqrt(discriminant)) / (2.f*a), t2 = (-b - sqrt(discriminant)) / (2.f*a);
     *t = t1 >= 0.f && t1 <= t2 ? t1 : t2;
 
-    // Avoid branching at heavy cost.
-//    if (t < 0.f) {
-//        return false;
-//    }
-
-//    intersection_t intersection;
-//    intersection.t = t;
-//    intersection.point = eye + dir * t;
-//    intersection.normal = fast_normalize(matrix_mult(sphere->inv_tr_transform, (float4)(trans_eye + trans_dir * t, 0.f)).xyz);
-//    *intersect = intersection;
     *local_normal = trans_eye + trans_dir * (*t);
     return discriminant >= 0 && (*t) >= 0.f;
 }
 
-bool shape_intersection(shape_t *shape, ray_t ray, float *t, float3 *local_normal) {
+bool shape_intersection(local shape_t *shape, ray_t ray, float *t, float3 *local_normal) {
     switch (shape->type) {
     case SPHERE:
         return sphere_intersect(shape, ray, t, local_normal);
@@ -190,27 +164,26 @@ bool shape_intersection(shape_t *shape, ray_t ray, float *t, float3 *local_norma
 
 intersection_t scene_intersect(
         ray_t ray,
-        __global const scene_t *scene,
-        __global const shape_t *shapes) {
+        int shape_count,
+        local const shape_t *shapes) {
     float closest = 999999.f;
     float closest_t = -1.f;
     float3 closest_local_normal;
     closest_local_normal.z = 1.f;
     int closest_i = 0;
-    for (int i = 0; i < scene->shape_count; i++) {
-        shape_t shape = shapes[i];
+    for (int i = 0; i < shape_count; i++) {
+        //shape_t shape = shapes[i];
 
         float t;
         float3 local_normal;
-        if (!shape_intersection(&shape, ray, &t, &local_normal)) {
+        if (!shape_intersection(&shapes[i], ray, &t, &local_normal)) {
             continue;
         }
 
-        if (t > 0.f && t < closest) {
-            closest_t = t;
-            closest_local_normal = local_normal;
-            closest_i = i;
-        }
+        bool condition = t > 0.f && t < closest;
+        closest_t = condition ? t : closest_t;
+        closest_local_normal = condition ? local_normal : closest_local_normal;
+        closest_i = condition ? i : closest_i;
     }
 
     shape_t shape = shapes[closest_i];
@@ -218,8 +191,6 @@ intersection_t scene_intersect(
     intersection.shape_index = closest_i;
     intersection.point = ray.p + ray.dir * closest_t;
     intersection.t = closest_t;
-    //intersection.normal = normalize((float3)(0.f, 0.f, -1.f));
     intersection.normal = fast_normalize(matrix_mult43(shape.inv_tr_transform, closest_local_normal));
-    //intersection.normal = fast_normalize(matrix_mult(shape.inv_tr_transform, (float4)(closest_local_normal, 0.f)).xyz);
     return intersection;
 }

@@ -33,6 +33,6 @@ public:
             QJsonObject &geometry,
             QMap<QString, Material> mtl_map);
     bool load_material(QJsonObject &material, QMap<QString, Material> *mtl_map);
-    glm::vec3 ToVec3(const QJsonArray &s);
-    glm::vec3 ToVec3(const QString &s);
+    glm::vec3 to_vec3(const QJsonArray &s);
+    glm::vec3 to_vec3(const QString &s);
 };

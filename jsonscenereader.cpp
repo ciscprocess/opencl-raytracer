@@ -27,9 +27,9 @@ Scene JsonSceneReader::load_scene(QFile &file) {
             //load camera
             if (sceneObj.contains(QString("camera"))) {
                 camera = sceneObj["camera"].toObject();
-                if (camera.contains(QString("target"))) ref = ToVec3(camera["target"].toArray());
-                if (camera.contains(QString("eye"))) eye = ToVec3(camera["eye"].toArray());
-                if (camera.contains(QString("worldUp"))) world_up = ToVec3(camera["worldUp"].toArray());
+                if (camera.contains(QString("target"))) ref = to_vec3(camera["target"].toArray());
+                if (camera.contains(QString("eye"))) eye = to_vec3(camera["eye"].toArray());
+                if (camera.contains(QString("worldUp"))) world_up = to_vec3(camera["worldUp"].toArray());
                 if (camera.contains(QString("width"))) width = camera["width"].toDouble();
                 if (camera.contains(QString("height"))) height = camera["height"].toDouble();
                 if (camera.contains(QString("fov"))) fovy = camera["fov"].toDouble();
@@ -97,7 +97,7 @@ shape_t JsonSceneReader::load_shape(
 
     glm::vec3 le(0.f, 0.f, 0.f);
     if (geometry.contains("lightColor")) {
-        le = ToVec3(geometry["lightColor"].toArray());
+        le = to_vec3(geometry["lightColor"].toArray());
     }
 
     if (geometry.contains("intensity")) {
@@ -111,9 +111,9 @@ shape_t JsonSceneReader::load_shape(
     //load transform to shape
     if(geometry.contains(QString("transform"))) {
         QJsonObject transform = geometry["transform"].toObject();
-        if(transform.contains(QString("translate"))) t = ToVec3(transform["translate"].toArray());
-        if(transform.contains(QString("rotate"))) r = ToVec3(transform["rotate"].toArray());
-        if(transform.contains(QString("scale"))) s = ToVec3(transform["scale"].toArray());
+        if(transform.contains(QString("translate"))) t = to_vec3(transform["translate"].toArray());
+        if(transform.contains(QString("rotate"))) r = to_vec3(transform["rotate"].toArray());
+        if(transform.contains(QString("scale"))) s = to_vec3(transform["scale"].toArray());
     }
 
     shape_t shape = create_shape(shape_type, t, r, s);
@@ -142,7 +142,7 @@ bool JsonSceneReader::load_material(QJsonObject &material, QMap<QString, Materia
 
     if (QString::compare(type, QString("MatteMaterial")) == 0)
     {
-        glm::vec3 Kd = ToVec3(material["Kd"].toArray());
+        glm::vec3 Kd = to_vec3(material["Kd"].toArray());
         //float sigma = static_cast< float >(material["sigma"].toDouble());
         Material result;
         bxdf_t bxdf;
@@ -156,7 +156,7 @@ bool JsonSceneReader::load_material(QJsonObject &material, QMap<QString, Materia
         mtl_map->insert(material["name"].toString(), result);
     }
     else if(QString::compare(type, QString("MirrorMaterial")) == 0) {
-        glm::vec3 Kr = ToVec3(material["Kr"].toArray());
+        glm::vec3 Kr = to_vec3(material["Kr"].toArray());
         //float sigma = static_cast< float >(material["sigma"].toDouble());
         Material result;
         bxdf_t bxdf;
@@ -171,7 +171,7 @@ bool JsonSceneReader::load_material(QJsonObject &material, QMap<QString, Materia
     }
     else if(QString::compare(type, QString("GlassMaterial")) == 0)
     {
-        glm::vec3 Kt = ToVec3(material["Kt"].toArray());
+        glm::vec3 Kt = to_vec3(material["Kt"].toArray());
         //float sigma = static_cast< float >(material["sigma"].toDouble());
         Material result;
 
@@ -184,82 +184,7 @@ bool JsonSceneReader::load_material(QJsonObject &material, QMap<QString, Materia
         bxdf.type = BRDF_SPECULAR;
         bxdf.eta = eta;
         result.bsdf.bxdfs[0] = bxdf;
-
-//        bxdf.props = (bxdfprops_t)(BSDF_TRANSMISSION | BSDF_SPECULAR);
-//        bxdf.color.x = Kt.x;
-//        bxdf.color.y = Kt.y;
-//        bxdf.color.z = Kt.z;
-//        bxdf.type = BTDF_SPECULAR;
-//        bxdf.eta = eta;
-//        result.bsdf.bxdfs[1] = bxdf;
-
-
-        result.bsdf.bxdfs_count = 1;
-        mtl_map->insert(material["name"].toString(), result);
     }
-//    else if(QString::compare(type, QString("TranslucentMaterial")) == 0) {
-//        Color3f lb_r = ToVec3(material["lb_r"].toArray());
-//        Color3f lb_t = ToVec3(material["lb_t"].toArray());
-//        Color3f mf_r = ToVec3(material["mr_r"].toArray());
-//        Color3f mf_t = ToVec3(material["mf_t"].toArray());
-//        float roughness = 0.f;
-//        if(material.contains(QString("roughness"))) {
-//            roughness = material["roughness"].toDouble();
-//        }
-//        auto result = std::make_shared<TranslucentMaterial>(lb_r, lb_t, mf_r, mf_t, roughness);
-//        mtl_map->insert(material["name"].toString(), result);
-//    }
-//    else if(QString::compare(type, QString("GlassMaterial")) == 0)
-//    {
-//        std::shared_ptr<QImage> textureMapRefl;
-//        std::shared_ptr<QImage> textureMapTransmit;
-//        std::shared_ptr<QImage> normalMap;
-//        Color3f Kr = ToVec3(material["Kr"].toArray());
-//        Color3f Kt = ToVec3(material["Kt"].toArray());
-//        float eta = material["eta"].toDouble();
-//        if(material.contains(QString("textureMapRefl"))) {
-//            QString img_filepath = local_path.append(material["textureMapRefl"].toString());
-//            textureMapRefl = std::make_shared<QImage>(img_filepath);
-//        }
-//        if(material.contains(QString("textureMapTransmit"))) {
-//            QString img_filepath = local_path.append(material["textureMapTransmit"].toString());
-//            textureMapTransmit = std::make_shared<QImage>(img_filepath);
-//        }
-//        if(material.contains(QString("normalMap"))) {
-//            QString img_filepath = local_path.append(material["normalMap"].toString());
-//            normalMap = std::make_shared<QImage>(img_filepath);
-//        }
-//        auto result = std::make_shared<GlassMaterial>(Kr, Kt, eta, textureMapRefl, textureMapTransmit, normalMap);
-//        mtl_map->insert(material["name"].toString(), result);
-//    }
-//    else if(QString::compare(type, QString("PlasticMaterial")) == 0)
-//    {
-//        std::shared_ptr<QImage> roughnessMap;
-//        std::shared_ptr<QImage> textureMapDiffuse;
-//        std::shared_ptr<QImage> textureMapSpecular;
-//        std::shared_ptr<QImage> normalMap;
-//        Color3f Kd = ToVec3(material["Kd"].toArray());
-//        Color3f Ks = ToVec3(material["Ks"].toArray());
-//        float roughness = material["roughness"].toDouble();
-//        if(material.contains(QString("roughnessMap"))) {
-//            QString img_filepath = local_path.append(material["roughnessMap"].toString());
-//            roughnessMap = std::make_shared<QImage>(img_filepath);
-//        }
-//        if(material.contains(QString("textureMapDiffuse"))) {
-//            QString img_filepath = local_path.append(material["textureMapDiffuse"].toString());
-//            textureMapDiffuse = std::make_shared<QImage>(img_filepath);
-//        }
-//        if(material.contains(QString("textureMapSpecular"))) {
-//            QString img_filepath = local_path.append(material["textureMapSpecular"].toString());
-//            textureMapSpecular = std::make_shared<QImage>(img_filepath);
-//        }
-//        if(material.contains(QString("normalMap"))) {
-//            QString img_filepath = local_path.append(material["normalMap"].toString());
-//            normalMap = std::make_shared<QImage>(img_filepath);
-//        }
-//        auto result = std::make_shared<PlasticMaterial>(Kd, Ks, roughness, roughnessMap, textureMapDiffuse, textureMapSpecular, normalMap);
-//        mtl_map->insert(material["name"].toString(), result);
-//    }
     else
     {
         std::cerr << "Could not parse the material!" << std::endl;
@@ -269,14 +194,11 @@ bool JsonSceneReader::load_material(QJsonObject &material, QMap<QString, Materia
     return true;
 }
 
-glm::vec3 JsonSceneReader::ToVec3(const QJsonArray &s)
-{
-    glm::vec3 result(s.at(0).toDouble(), s.at(1).toDouble(), s.at(2).toDouble());
-    return result;
+glm::vec3 JsonSceneReader::to_vec3(const QJsonArray &s) {
+    return glm::vec3(s.at(0).toDouble(), s.at(1).toDouble(), s.at(2).toDouble());
 }
 
-glm::vec3 JsonSceneReader::ToVec3(const QString &s)
-{
+glm::vec3 JsonSceneReader::to_vec3(const QString &s) {
     glm::vec3 result;
     int start_idx;
     int end_idx = -1;
